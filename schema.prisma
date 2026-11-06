@@ -1,0 +1,125 @@
+// Prisma Schema for ZenithStore E-Commerce Web Platform
+// Supports SQLite (default for zero-setup local dev), PostgreSQL, and MySQL.
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  name         String
+  email        String    @unique
+  password     String
+  role         Role      @default(USER)
+  phone        String?
+  street       String?
+  city         String?
+  postalCode   String?
+  country      String?   @default("United States")
+  avatar       String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  orders       Order[]
+  reviews      Review[]
+}
+
+model Product {
+  id             Int       @id @default(autoincrement())
+  name           String
+  slug           String    @unique
+  description    String
+  price          Float
+  compareAtPrice Float?
+  image          String
+  images         String?   // JSON-encoded array or comma-separated URLs
+  category       String
+  brand          String?
+  countInStock   Int       @default(0)
+  rating         Float     @default(0.0)
+  numReviews     Int       @default(0)
+  isFeatured     Boolean   @default(false)
+  specs          String?   // JSON-encoded key-value specs
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  orderItems     OrderItem[]
+  reviews        Review[]
+}
+
+model Order {
+  id                 Int         @id @default(autoincrement())
+  orderNumber        String      @unique
+  userId             Int
+  user               User        @relation(fields: [userId], references: [id])
+  
+  // Financial breakdown
+  itemsPrice         Float
+  shippingPrice      Float       @default(0.0)
+  taxPrice           Float       @default(0.0)
+  discount           Float       @default(0.0)
+  totalPrice         Float
+
+  // Payment information
+  paymentMethod      String      // 'Card', 'COD', 'UPI'
+  paymentStatus      String      @default("Paid") // 'Pending', 'Paid', 'Failed'
+  paidAt             DateTime?
+
+  // Order lifecycle & tracking
+  orderStatus        String      @default("Placed") // 'Placed', 'Processing', 'Shipped', 'Delivered', 'Cancelled'
+  trackingNumber     String?
+  carrier            String?
+  estimatedDelivery  DateTime?
+  deliveredAt        DateTime?
+  
+  // Shipping Address snapshot
+  shippingName       String
+  shippingAddress    String
+  shippingCity       String
+  shippingPostalCode String
+  shippingCountry    String
+  shippingPhone      String
+
+  // Tracking history log (JSON string of [{ status, timestamp, note }])
+  statusHistory      String?
+
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  orderItems         OrderItem[]
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+  name      String
+  image     String
+  price     Float
+  quantity  Int
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  rating    Int
+  comment   String
+  userName  String
+  createdAt DateTime @default(now())
+}
+
